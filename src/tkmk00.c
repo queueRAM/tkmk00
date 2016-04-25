@@ -342,12 +342,12 @@ static int proc_80040A60(void) // 80040A60/041660
    t8 -= v1;
    v0 = t0 >> t8;
    if (t9 < 0x21) {
-      t0 = read_u32_be(a0);
       if (t9 != 0x20) {
          t0 <<= v1;
          a3 += v1;
          return v0;
       } else { // .Lproc_80040A60_34: # 80040A94
+         t0 = read_u32_be(a0); // likely BDS
          a3 = 0;
          a0 += 4;
          return v0;
@@ -359,7 +359,7 @@ static int proc_80040A60(void) // 80040A60/041660
       t9 -= a3;
       a3 -= t8;
       t8 = t0 >> t9;
-      t0 |= t8;
+      v0 |= t8;
       a0 += 4;
       t0 <<= a3;
       return v0;
@@ -398,7 +398,7 @@ static int proc_80040AC8(void) // 80040AC8/0416C8
    if (s7 == 0) {
       s7 = *(i8*)s6;
       v0 = 0x100;
-      v0 <<= v1;
+      v0 <<= v1; // likely BDS
       if ((s7 & 0x80) == 0x00) { // if (s7 >= 0) {
          v0 = ~v0;
          s7 += 3;
