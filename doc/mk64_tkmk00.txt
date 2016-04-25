@@ -1,0 +1,92 @@
+Mario Kart 64 TKMK00 Format
+
+The TKMK00 format is stores some textures in the Mario Kart 64 title and menu screens.
+
+Functions:
+
+// a0[in]: pointer to TKMK00 data
+// a1[out]: pointer to output (a0->h8*a0->hA words)
+// a2[out]: pointer to output (a0->h8*a0->hA*2 words)
+// a3[in]: byte? values observed: 0x01, 0xBE
+void tkmk00_decode(a0, a1, a2, a3) 800405D0/0411D0
+
+Examples:
+7FA3C0: 54 4B 4D 4B 30 30 06 0F  00 DC 00 20 00 00 06 B8
+7FA3D0: 00 00 09 88 00 00 0A 2C  00 00 0A A0 00 00 0B 08
+7FA3E0: 00 00 0B 70 00 00 0B B4  00 00 0B DC AA 02 04 06
+7FA3F0: 02 03 AA AA A9 AA 80 15  55 09 08 9F C0 42 05 E6
+
+7FAFC0: 54 4B 4D 4B 30 30 06 0F  00 82 00 20 00 00 03 EC 
+7FAFD0: 00 00 07 34 00 00 07 90  00 00 07 D8 00 00 08 14 
+7FAFE0: 00 00 08 5C 00 00 08 94  00 00 08 B8 BA AA AA AA 
+7FAFF0: AA AA AA A8 01 75 55 55  55 55 55 55 50 03 AA AA
+
+List of TKMK00 blocks:
+7FA3C0: 'Player Select'
+7FAFC0: 
+7FB8C0: DK's name on player select
+7FBAC0: 
+7FBCC0: 
+7FBEC0: 
+7FC0C0: 
+7FC2C0: 
+7FC4C0: 
+7FC6C0: 
+7FC8C0: 
+7FCDC0: 
+7FD2C0: 
+7FD7C0: 
+7FDDC0: 
+7FE1C0: 
+7FE6C0: 
+7FEBC0: 
+7FEFC0: 
+7FF3C0: 
+7FF7C0: 
+7FFCC0: 
+8000C0: 
+8004C0: 
+8008C0: 
+800DC0: 
+8010C0: 
+8014C0: 
+8018C0: 
+801EC0: 
+8021C0: 
+802DC0: 
+8031C0: 
+8035C0: 
+8039C0: 
+803DC0: 
+8049C0: 
+804EC0: 
+8055C0: 
+805FC0: 
+806AC0: 
+806DC0: 
+8071C0: 
+8075C0: 
+8078C0: 
+807BC0: 
+807EC0: 
+8080C0: 
+8082C0: 
+8084C0: 
+8086C0: 
+8089C0: 
+808CC0: 
+808EC0: 
+8090C0: 
+8092C0: 
+8094C0: 
+8162C0: 
+81F6C0: 
+8202C0: 
+8209C0: 
+820AC0: 
+820FC0: 
+
+Other notes:
+http://origami64.net/showthread.php?tid=47&pid=1504
+http://www.romhacking.net/forum/index.php?topic=20263.0
+http://acmlm.kafuka.org/archive3/thread.php?id=3283
