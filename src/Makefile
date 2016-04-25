@@ -20,11 +20,11 @@ AR        = $(CROSS)ar
 INCLUDES  = 
 DEFS      = 
 # Release flags
-CFLAGS    = -m32 -Wall -Wextra -O0 -g -ffunction-sections -fdata-sections $(INCLUDES) $(DEFS) -MMD
-LDFLAGS   = -m32 -s -Wl,--gc-sections
+# CFLAGS    = -m32 -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections $(INCLUDES) $(DEFS) -MMD
+# LDFLAGS   = -m32 -s -Wl,--gc-sections
 # Debug flags
-#CFLAGS    = -Wall -Wextra -O0 -g $(INCLUDES) $(DEFS) -MMD
-#LDFLAGS   =
+CFLAGS    = -m32 -Wall -Wextra -O0 -g $(INCLUDES) $(DEFS) -MMD
+LDFLAGS   = -m32
 LIBS      = 
 
 OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(SRC_FILES:.c=.o))
