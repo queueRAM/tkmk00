@@ -105,6 +105,8 @@ int main(int argc, char *argv[])
    unsigned char *a2_buf = NULL;
    long in_size;
    long bytes_written;
+   int w, h;
+   int a1size, a2size;
 
    // get configuration from arguments
    config = default_config;
@@ -131,24 +133,34 @@ int main(int argc, char *argv[])
    size_t out_size = 1 * MB;
    a1_buf = malloc(out_size);
    a2_buf = malloc(out_size);
+
+   w = read_u16_be(&in_buf[config.offset + 0x8]);
+   h = read_u16_be(&in_buf[config.offset + 0xA]);
    
    // run decoder
    tkmk00decode(&in_buf[config.offset], a1_buf, a2_buf, config.a3);
 
+   make_dir(config.out_dir);
+
    // write to output files
    sprintf(out_filename, "%s/a1.bin", config.out_dir);
-   bytes_written = write_file(out_filename, a1_buf, out_size);
-   if (bytes_written < (long)out_size) {
-      ERROR("Error writing bytes to output file \"%s\"\n", out_filename);
+   a1size = w * h;
+   bytes_written = write_file(out_filename, a1_buf, a1size);
+   if (bytes_written < a1size) {
+      ERROR("Error writing to output file \"%s\"\n", out_filename);
       exit(EXIT_FAILURE);
    }
    
    sprintf(out_filename, "%s/a2.bin", config.out_dir);
-   bytes_written = write_file(out_filename, a2_buf, out_size);
-   if (bytes_written < (long)out_size) {
-      ERROR("Error writing bytes to output file \"%s\"\n", out_filename);
+   a2size = 2 * w * h;
+   bytes_written = write_file(out_filename, a2_buf, a2size);
+   if (bytes_written < a2size) {
+      ERROR("Error writing to output file \"%s\"\n", out_filename);
       exit(EXIT_FAILURE);
    }
+
+   free(a1_buf);
+   free(a2_buf);
 
    return EXIT_SUCCESS;
 }
