@@ -35,6 +35,13 @@ static void TRACE(const char *name)
    fflush(stderr);
 }
 
+static i32 SRL(i32 val, int amount)
+{
+   u32 vU = (u32)val;
+   vU >>= amount;
+   return (i32)vU;
+}
+
 // a0[in]: pointer to TKMK00 data
 // a1[out]: pointer to output (a0->h8*a0->hA words)
 // a2[out]: pointer to output (a0->h8*a0->hA*2 words)
@@ -103,7 +110,7 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
           s7 -= 4;
        }
        s6 -= 1;
-       s5 >>= 1;
+       s5 = SRL(s5, 1); // s5 >>= 1;
        write_u32_be(s4, s7);
        a3 += 4;
        s4 += 4;
@@ -368,7 +375,7 @@ static int proc_80040A60(void) // 80040A60/041660
    t9 = a3 + v1;
    t8 = 0x20;
    t8 -= v1;
-   v0 = t0 >> t8;
+   v0 = SRL(t0, t8); // v0 = t0 >> t8;
    if (t9 < 0x21) {
       if (t9 != 0x20) {
          t0 <<= v1;
@@ -386,7 +393,7 @@ static int proc_80040A60(void) // 80040A60/041660
       t9 -= v1;
       t9 -= a3;
       a3 -= t8;
-      t8 = t0 >> t9;
+      t8 = SRL(t0, t9); // t8 = t0 >> t9;
       v0 |= t8;
       a0 += 4;
       t0 <<= a3;
@@ -399,7 +406,7 @@ static int proc_80040A60(void) // 80040A60/041660
 static int proc_80040AC8(void) // 80040AC8/0416C8
 {
    TRACE(__func__);
-   t8 = t2 >> v1;
+   t8 = SRL(t2, v1); // t8 = t2 >> v1;
    t9 = t8 & 0x1;
    s7 = v1 << 1;
    t8 = sp + s7;
@@ -416,7 +423,7 @@ static int proc_80040AC8(void) // 80040AC8/0416C8
       t9 = read_u32_be(s6);
       s7 -= 1;
       write_u16_be(t8 + 0x1E0, s7);
-      v0 = t9 >> s7;
+      v0 = SRL(t9, s7); // v0 = t9 >> s7;
       v0 &= 0x1;
       return v0;
    } // Lproc_80040AC8_4C
@@ -447,7 +454,7 @@ static int proc_80040AC8(void) // 80040AC8/0416C8
    s7 -= 1;
    write_u16_be(t8 + 0x1E0, s7);
    t8 = s7 & 0x7;
-   v0 >>= t8;
+   v0 = SRL(v0, t8); // v0 >>= t8;
    v0 &= 0x1;
    if (t8 == 0 && s7 != 0) {
       t8 = 0x100;
@@ -547,7 +554,7 @@ static int proc_80040C94(void) // 80040C94/041894
          v0 = t9 & 0x1; // likely BDS
       } // .Lproc_80040C94_34: # 80040CC8
 Lproc_80040C94_34:
-      t9 >>= 1;
+      t9 = SRL(t9, 1); // t9 >>= 1;
       if (v0 != 0) {
          t9 += t8;
          t9 += 1;
