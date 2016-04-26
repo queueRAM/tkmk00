@@ -45,8 +45,10 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
    //   000-07F: 0x20 words
    //   080-11F: ?
    //   120-13F: 8 words
-   //   140-1DF: ?
-   //   1E0-1EF: 4 words addressed individually
+   //   140-17B: ?
+   //   17C-19F: preserved registers
+   //   1A0-1DF: possibly used with s5
+   //   1E0-1EF: 4 words addressed individually and used with t8
    //   1F0-3FF: ?
    u8 sp000[0x400];
    
@@ -67,27 +69,27 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
    t9 = sp;
    s7 = 0x20;
    t0 = t4 * t3;
-   while (s7 != 0) { // .Ltkmk00decode_48: # 80040618
+   do { // .Ltkmk00decode_48: # 80040618
       s7 -= 1;
       write_u32_be(t9, t8);
       t9 += 4;
-   }
+   } while (s7 != 0);
    
    s4 = t0;
    s6 = a2;
-   while (s4 > 0) { // .Ltkmk00decode_64: # 80040634
+   do { // .Ltkmk00decode_64: # 80040634
       s4 -= 2;
       write_u32_be(s6, 0x0);
       s6 += 4;
-   }
+   } while (s4 > 0);
    
    s7 = t0;
    t8 = a1;
-   while (s7 > 0) { // .Ltkmk00decode_7C: # 8004064C
+   do { // .Ltkmk00decode_7C: # 8004064C
       s7 -= 4;
       write_u32_be(t8, 0x0);
       t8 += 4;
-   }
+   } while (s7 > 0);
   
    s4 = sp + 0x1C0;
    s6 = 8;
@@ -95,7 +97,7 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
    s5 = t2; // above: t2 = (u8)(a0 + 0x6)
    do { // Ltkmk00decode_9C
        s7 = read_u32_be(a3);
-       v0 = s5 & 1;
+       v0 = s5 & 0x1;
        s7 += a0;
        if (v0 == 0) {
           s7 -= 4;
@@ -192,9 +194,9 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
             t8 += v1;
             if (t8 >= 0x20) {
                t8 = 0x1F;
-            } else if (t8 < 0) {
+            } else if (t8 < 0) { // .Ltkmk00decode_1F0: # 800407C0
                t8 = 0;
-            }
+            } // .Ltkmk00decode_1FC: # 800407CC
             t9 = s1;
             proc_80040C94();
             s1 = t9;
@@ -205,7 +207,6 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
             t8 += t9;
             t8 >>= 1;
             t8 += v1;
-            
             if (t8 >= 0x20) {
                t8 = 0x1F;
             } else if (t8 < 0) {
@@ -213,13 +214,11 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
             }
             t9 = s4;
             proc_80040C94();
-            
             s0 <<= 6;
             s1 <<= 11;
             t9 <<= 1;
             t8 = s0 | s1;
             t7 = t8 | t9;
-            
             s5 = 0x3F; // likely BDS and below
             if (t7 != s2) {
                t7 |= 0x1;
@@ -258,42 +257,41 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
          if (t5 < s5) { // .Ltkmk00decode_2CC: # 8004089C
             t9 |= 0x02;
          } 
-         s6 = t4 - 2;
+         s6 = t4 - 2; // likely BDS and below
          if (t5 < s6) { // .Ltkmk00decode_2E4: # 800408B4
             t9 |= 0x04;
          }
-         s5 = t3 - 1;
+         s5 = t3 - 1; // likely BDS and below
          if (t6 < s5) { // .Ltkmk00decode_2F8: # 800408C8
             t9 |= 0x08;
          }
-         s6 = t3 - 2;
+         s6 = t3 - 2; // likely BDS and below
          if (t6 < s6) { // .Ltkmk00decode_30C: # 800408DC
             t9 |= 0x10;
          } // .Ltkmk00decode_320: # 800408F0
 
-         s7 = t9 & 0x2;
-         if (s7 == 2) {
+         s7 = t9 & 0x2; // likely BDS and not
+         if (s7 == 2) { // .Ltkmk00decode_320: # 800408F0
             s4 = *(u8*)(a1 + 1);
             s4 += 1;
             *(u8*)(a1 + 1) = s4;
          } 
 
-         s6 = t9 & 0x4;
+         s6 = t9 & 0x4; // likely BDS and not
          if (s6 == 4) { // .Ltkmk00decode_33C: # 8004090C
             s4 = *(u8*)(a1 + 2);
             s4 += 1;
             *(u8*)(a1 + 2) = s4;
          }
          
-         s7 = t9 & 0x9;
+         s7 = t9 & 0x9; // likely BDS and not
          s5 = a1 + t4;
          if (s7 == 9)  {
             s4 = *(u8*)(s5 - 1);
             s4 += 1;
             *(u8*)(s5 - 1) = s4;
-         }
+         } // .Ltkmk00decode_370: # 80040940
          
-         // .Ltkmk00decode_370: # 80040940
          s6 = t9 & 0x8;
          if (s6 == 8) {
             s4 = *(u8*)(s5);
@@ -301,14 +299,14 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
             *(u8*)(s5) = s4;
          }
          
-         s7 = t9 & 0xA;
+         s7 = t9 & 0xA; // likely BDS and not
          if (s7 == 0xA) { // .Ltkmk00decode_390: # 80040960
             s4 = *(u8*)(s5 + 1);
             s4 += 1;
             *(u8*)(s5 + 1) = s4;
          }
          
-         s7 = t9 & 0x10;
+         s7 = t9 & 0x10; // likely BDS and not
          s6 = s5 + t4;
          if (s7 == 0x10) { // .Ltkmk00decode_3AC: # 8004097C
             s4 = *(u8*)(s6);
@@ -348,12 +346,12 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
                } else if (v0 == 3) { // .Ltkmk00decode_430: # 80040A00
                   s1 += 2;
                } // .Ltkmk00decode_43C: # 80040A0C
-               s1 += s0;
+               s1 += s0; // likely BDS and not cases
                write_u16_be(s1, s3);
             } while (1); // b     .Ltkmk00decode_3E0
          }
 tkmk00decode_448:
-         t5 += 1; // likely BDS
+         t5 += 1; // likely BDS and not cases
          a1 += 1;
          a2 += 2;
       } while (t5 != t4);
