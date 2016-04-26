@@ -444,7 +444,6 @@ static int proc_80040BC0(void) // 80040BC0/0417C0
    v1 = 0;
    v0 = proc_80040AC8();
 
-   s0 = 0;
    if (v0 != 0) {
       write_u32_be(s3 + 4, s4);
       s4 += 1;
@@ -464,7 +463,9 @@ static int proc_80040BC0(void) // 80040BC0/0417C0
       // restore RA
       v0 = s6;
       return v0;
-   }
+   } else {
+      s0 = 0; // likely BDS
+   } // .Lproc_80040BC0_64: # 80040C24
    s1 = 5;
    do {
       v1 = 0;
@@ -484,7 +485,7 @@ static int proc_80040BC0(void) // 80040BC0/0417C0
 static void proc_80040C54(void) // 80040C54/041854
 {
    s4 = t1;
-   while (s4 < 0x20) {
+   while (s4 < 0x20) { // .Lproc_80040C54_8: # 80040C5C
       v1 = 0;
       v0 = proc_80040AC8();
       v1 = s4 << 1;
@@ -495,7 +496,7 @@ static void proc_80040C54(void) // 80040C54/041854
       } else {
          s4 = read_u16_be(t8 + 0xFE);
       }
-   }
+   } // .Lproc_80040C54_38: # 80040C8C
 } // proc_80040C54
 
 // inputs: t8, t9
@@ -507,24 +508,27 @@ static int proc_80040C94(void) // 80040C94/041894
       v0 -= t8;
       v0 <<= 1;
       if (v0 < t9) {
-         v0 = t9 & 0x1; // BDS
          v0 = 0x1F;
          t9 = v0 - t9;
          return v0;
+      } else {
+         v0 = t9 & 0x1; // likely BDS
       } // .Lproc_80040C94_34: # 80040CC8
 Lproc_80040C94_34:
+      t9 >>= 1;
       if (v0 != 0) {
-         t9 >>= 1;
          t9 += t8;
          t9 += 1;
          return v0;
       } // .Lproc_80040C94_48: # 80040CDC
       t9 = t8 - t9;
       return v0;
+   } else {
+      v0 = t8 << 1; // likely BDS
    } // .Lproc_80040C94_54: # 80040CE8
-   v0 = t8 << 1; // from BDS
+   // TODO: fix this loop
    if (v0 >= t9) {
-      v0 = t9 & 0x1;
+      v0 = t9 & 0x1; // likely BDS
       goto Lproc_80040C94_34;
    }
    return v0;
