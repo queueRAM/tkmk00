@@ -8,6 +8,33 @@ static int proc_80040BC0(void);
 static void proc_80040C54(void);
 static int proc_80040C94(void);
 
+static void TRACE_HEADER(void)
+{
+   INFO("%8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %s\n",
+         "a0", "a1", "a2", "a3", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9",
+         "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "v0", "v1", "name");
+}
+
+static void TRACE(const char *name)
+{
+   static int count = 0;
+   static int header = 1;
+   if (header) {
+      TRACE_HEADER();
+      header = 0;
+   }
+   count++;
+   if (count == 50) {
+      header = 1;
+      count = 0;
+   }
+   INFO("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %s\n",
+         a0, a1, a2, a3, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9,
+         s0, s1, s2, s3, s4, s5, s6, s7, v0, v1, name);
+   fflush(stdout);
+   fflush(stderr);
+}
+
 // a0[in]: pointer to TKMK00 data
 // a1[out]: pointer to output (a0->h8*a0->hA words)
 // a2[out]: pointer to output (a0->h8*a0->hA*2 words)
@@ -29,6 +56,8 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
    a1 = (i32)a1p;
    a2 = (i32)a2p;
    a3 = a3p;
+
+   TRACE(__func__);
 
    t4 = read_u16_be(a0 + 0x8);
    t3 = read_u16_be(a0 + 0xA);
@@ -337,6 +366,7 @@ tkmk00decode_448:
 // outputs: a0, a3, t0, t8, t9, v0
 static int proc_80040A60(void) // 80040A60/041660
 {
+   TRACE(__func__);
    t9 = a3 + v1;
    t8 = 0x20;
    t8 -= v1;
@@ -370,6 +400,7 @@ static int proc_80040A60(void) // 80040A60/041660
 // outputs: t8, t9, s6, s7, v0
 static int proc_80040AC8(void) // 80040AC8/0416C8
 {
+   TRACE(__func__);
    t8 = t2 >> v1;
    t9 = t8 & 0x1;
    s7 = v1 << 1;
@@ -438,6 +469,7 @@ static int proc_80040AC8(void) // 80040AC8/0416C8
 // outputs: v0, v1, s0, s1, s3, s4, s5
 static int proc_80040BC0(void) // 80040BC0/0417C0
 {
+   TRACE(__func__);
    // s3 used like stack
    // save RA
    s3 -= 8;
@@ -484,6 +516,7 @@ static int proc_80040BC0(void) // 80040BC0/0417C0
 // outputs: s4, v0
 static void proc_80040C54(void) // 80040C54/041854
 {
+   TRACE(__func__);
    s4 = t1;
    while (s4 < 0x20) { // .Lproc_80040C54_8: # 80040C5C
       v1 = 0;
@@ -503,6 +536,7 @@ static void proc_80040C54(void) // 80040C54/041854
 // outputs: v0, t9
 static int proc_80040C94(void) // 80040C94/041894
 {
+   TRACE(__func__);
    if (t8 >= 0x10) {
       v0 = 0x1F;
       v0 -= t8;
