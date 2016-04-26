@@ -523,7 +523,7 @@ static void proc_80040C54(void) // 80040C54/041854
 {
    TRACE(__func__);
    s4 = t1;
-   while (s4 < 0x20) { // .Lproc_80040C54_8: # 80040C5C
+   while (s4 >= 0x20) { // .Lproc_80040C54_8: # 80040C5C
       v1 = 0;
       proc_80040AC8();
       v1 = s4 << 1;
@@ -565,7 +565,7 @@ Lproc_80040C94_34:
    } else {
       v0 = t8 << 1; // likely BDS
    } // .Lproc_80040C94_54: # 80040CE8
-   // TODO: fix this loop
+   // TODO: this branch isn't a loop, just reuses code above
    if (v0 >= t9) {
       v0 = t9 & 0x1; // likely BDS
       goto Lproc_80040C94_34;
