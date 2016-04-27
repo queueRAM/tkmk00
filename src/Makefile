@@ -3,6 +3,7 @@
 TARGET := tkmk00test
 
 SRC_FILES  := main.c   \
+              n64graphics.c \
               tkmk00.c \
               utils.c
 
@@ -25,7 +26,7 @@ DEFS      =
 # Debug flags
 CFLAGS    = -m32 -Wall -Wextra -O0 -g $(INCLUDES) $(DEFS) -MMD
 LDFLAGS   = -m32
-LIBS      = 
+LIBS      = -lpng
 
 OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(SRC_FILES:.c=.o))
 DEP_FILES = $(OBJ_FILES:.o=.d)

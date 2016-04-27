@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "n64graphics.h"
 #include "tkmk00.h"
 #include "utils.h"
 
@@ -31,7 +32,7 @@ static void print_usage(void)
          "tkmk00test v" TKMK00_VERSION ": Mario Kart 64 TKMK00 decoder\n"
          "\n"
          "Optional arguments:\n"
-         " -a A3        value to pass through A3 [0x01 or 0xBE] (default: 0x%02X)\n"
+         " -a ALPHA     value used as alpha mask [usually 0x01 or 0xBE] (default: 0x%02X)\n"
          " -d DIR       output directory (default: FILE.tkmk00)\n"
          " -o OFFSET    offset of TKMK00 data in FILE (default: all)\n"
          " -v           verbose progress output\n"
@@ -95,11 +96,12 @@ static void parse_arguments(int argc, char *argv[], tkmk00_config_t *config)
    }
 }
 
-static int find_tkmk00(unsigned char *buf, unsigned int length, unsigned int *offsets)
+// find all TKMK00 blocks in the buffer
+static int find_tkmk00(unsigned char *buf, unsigned int buf_len, unsigned int *offsets)
 {
    unsigned int i;
    int count = 0;
-   for (i = 0; i < length - 0x10; i += 4) {
+   for (i = 0; i < buf_len - 0x10; i += 4) {
       if (0 == memcmp(&buf[i], "TKMK00", 6)) {
          offsets[count++] = i;
       }
@@ -114,7 +116,7 @@ static void extract_tkmk00(unsigned char *buf, char *out_dir, unsigned int offse
    unsigned char *a2_buf = NULL;
    long bytes_written;
    int w, h;
-   int a1size, a2size;
+   int a1_size, a2_size;
    size_t out_size;
 
    // verify input
@@ -138,20 +140,24 @@ static void extract_tkmk00(unsigned char *buf, char *out_dir, unsigned int offse
 
    // write to output files
    sprintf(out_filename, "%s/%06X.a1.bin", out_dir, offset);
-   a1size = w * h;
-   bytes_written = write_file(out_filename, a1_buf, a1size);
-   if (bytes_written < a1size) {
+   a1_size = w * h;
+   bytes_written = write_file(out_filename, a1_buf, a1_size);
+   if (bytes_written < a1_size) {
       ERROR("Error writing to output file \"%s\"\n", out_filename);
       exit(EXIT_FAILURE);
    }
    
    sprintf(out_filename, "%s/%06X.a2.bin", out_dir, offset);
-   a2size = 2 * w * h;
-   bytes_written = write_file(out_filename, a2_buf, a2size);
-   if (bytes_written < a2size) {
+   a2_size = 2 * w * h;
+   bytes_written = write_file(out_filename, a2_buf, a2_size);
+   if (bytes_written < a2_size) {
       ERROR("Error writing to output file \"%s\"\n", out_filename);
       exit(EXIT_FAILURE);
    }
+
+   sprintf(out_filename, "%s/%06X.png", out_dir, offset);
+   rgba *img = raw2rgba((char*)a2_buf, w, h, 16);
+   rgba2png(img, w, h, out_filename);
 
    free(a1_buf);
    free(a2_buf);
@@ -160,11 +166,11 @@ static void extract_tkmk00(unsigned char *buf, char *out_dir, unsigned int offse
 int main(int argc, char *argv[])
 {
    char out_dir_gen[FILENAME_MAX];
+   unsigned int offsets[128];
    tkmk00_config_t config;
    unsigned char *in_buf = NULL;
    long in_size;
-   unsigned int offsets[128];
-   unsigned int count;
+   unsigned int offset_count;
    unsigned int i;
 
    // get configuration from arguments
@@ -183,13 +189,13 @@ int main(int argc, char *argv[])
    }
 
    if (config.offset == 0xFFFFFFFF) {
-      count = find_tkmk00(in_buf, (unsigned int)in_size, offsets);
+      offset_count = find_tkmk00(in_buf, (unsigned int)in_size, offsets);
    } else {
       offsets[0] = config.offset;
-      count = 1;
+      offset_count = 1;
    }
 
-   for (i = 0; i < count; i++) {
+   for (i = 0; i < offset_count; i++) {
       extract_tkmk00(in_buf, config.out_dir, offsets[i], config.a3);
    }
 
