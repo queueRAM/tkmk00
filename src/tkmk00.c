@@ -1,40 +1,31 @@
+#include <string.h>
+
 #include "utils.h"
 
-static i32 a0, a1, a2, a3, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, s0, s1, s2, s3, s4, s5, s6, s7, v0, v1, sp;
+static i32 t1, t7, t8, t9, s0, s1, s3, s4, s5, s6, s7, v0, v1;
+
+// 0x400 allocated on stack
+static u16 rgba_buf[0x40];     // SP[000]-SP[07F] - buffer of 32 RGBA colors
+static u16 buffer80_u16[0x3F]; // SP[080]-SP[0FD]
+static u16 bufferFE_u16[0x3F]; // SP[0FE]-SP[17B]
+                               // SP[17C]-SP[19F] - preserved registers
+static u8  byte_buffer[0x20];  // SP[1A0]-SP[1BF] - byte buffer
+static u8 *some_ptrs[8];       // SP[1C0]-SP[1DF] - 8 pointers to A0 data read from starting at offset 0xC
+static u16 some_u16s[8];       // SP[1E0]-SP[1EF] - 8 u16s, related to some_ptrs
+static u32 some_u32s[0x80];    // SP[200]-SP[3F0] - indexes used to initialize buffer80 and bufferFE
+
+static i32 header6;
+static int some_offset;
+static int some_flags;
+static u8 *in_ptr;
 
 static void proc_80040A60(void);
 static void proc_80040AC8(void);
-static void proc_80040BC0(void);
+static void proc_80040BC0(u32, u32*);
 static void proc_80040C54(void);
 static void proc_80040C94(void);
 
-static void TRACE_HEADER(void)
-{
-   INFO("%8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %s\n",
-         "a0", "a1", "a2", "a3", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9",
-         "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "v0", "v1", "name");
-}
-
-static void TRACE(const char *name)
-{
-   static int count = 0;
-   static int header = 1;
-   if (header) {
-      TRACE_HEADER();
-      header = 0;
-   }
-   count++;
-   if (count == 50) {
-      header = 1;
-      count = 0;
-   }
-   INFO("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %s\n",
-         a0, a1, a2, a3, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9,
-         s0, s1, s2, s3, s4, s5, s6, s7, v0, v1, name);
-   fflush(stdout);
-   fflush(stderr);
-}
-
+// this is needed to to logical shifts on signed data
 static i32 SRL(i32 val, int amount)
 {
    u32 vU = (u32)val;
@@ -43,119 +34,72 @@ static i32 SRL(i32 val, int amount)
 }
 
 // a0[in]: pointer to TKMK00 data
-// a1[out]: pointer to output (a0->h8*a0->hA words)
-// a2[out]: pointer to output (a0->h8*a0->hA*2 words)
-// a3[in]: byte? values observed: 0x01, 0xBE
+// a1[out]: pointer to output (1 byte per pixel)
+// a2[out]: pointer to output (RGBA16, 2 bytes per pixel)
+// a3[in]: RGBA color to set alpha to 0, values observed: 0x01, 0xBE
 void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
 {
-   // 0x400 allocated on stack
-   //   000-07F: 0x20 words
-   //   080-11F: ?
-   //   120-13F: 8 words
-   //   140-17B: ?
-   //   17C-19F: preserved registers
-   //   1A0-1DF: possibly used with s5
-   //   1E0-1EF: 4 words addressed individually and used with t8
-   //   1F0-3FF: ?
-   u8 sp000[0x400];
+   unsigned offset;
+   unsigned test_bits;
+   int width, height;
+   int col, row;
+   int pixels;
+   int alpha;
+   unsigned i;
+   u16 rgba0;
+   u16 rgba1;
+   u8 red0, red1, green0, green1, blue0, blue1;
    
-   // assign globals to params
-   sp = (i32)&sp000;
-   a0 = (i32)a0p;
-   a1 = (i32)a1p;
-   a2 = (i32)a2p;
-   a3 = a3p;
-
-   TRACE(__func__);
-
-   t4 = read_u16_be(a0 + 0x8);
-   t3 = read_u16_be(a0 + 0xA);
-   s2 = a3;
-   t2 = *(u8*)(a0 + 0x6);
-   t8 = -1;
-   t9 = sp;
-   s7 = 0x20;
-   t0 = t4 * t3;
-   do { // .Ltkmk00decode_48: # 80040618
-      s7 -= 1;
-      write_u32_be(t9, t8);
-      t9 += 4;
-   } while (s7 != 0);
+   width = read_u16_be(&a0p[0x8]);
+   height = read_u16_be(&a0p[0xA]);
+   alpha = a3p;
+   header6 = a0p[0x6];
+   pixels = width * height;
+   memset(rgba_buf, 0xFF, sizeof(rgba_buf));
+   memset(a2p, 0x0, 2 * pixels);
+   memset(a1p, 0x0, pixels);
    
-   s4 = t0;
-   s6 = a2;
-   do { // .Ltkmk00decode_64: # 80040634
-      s4 -= 2;
-      write_u32_be(s6, 0x0);
-      s6 += 4;
-   } while (s4 > 0);
-   
-   s7 = t0;
-   t8 = a1;
-   do { // .Ltkmk00decode_7C: # 8004064C
-      s7 -= 4;
-      write_u32_be(t8, 0x0);
-      t8 += 4;
-   } while (s7 > 0);
-  
-   s4 = sp + 0x1C0;
-   s6 = 8;
-   a3 = a0 + 0xC;
-   s5 = t2; // above: t2 = (u8)(a0 + 0x6)
-   do { // Ltkmk00decode_9C
-       s7 = read_u32_be(a3);
-       v0 = s5 & 0x1;
-       s7 += a0;
-       if (v0 == 0) {
-          s7 -= 4;
+   for (i = 0; i < 8; i++) {
+       offset = read_u32_be(&a0p[0xC + i*4]);
+       if (0 == (header6 & (0x1 << i))) {
+          offset -= 4;
        }
-       s6 -= 1;
-       s5 = SRL(s5, 1); // s5 >>= 1;
-       write_u32_be(s4, s7);
-       a3 += 4;
-       s4 += 4;
-   } while (s6 != 0);
+       some_ptrs[i] = a0p + offset;
+   }
 
-   write_u32_be(sp + 0x1E0, 0x0);
-   write_u32_be(sp + 0x1E4, 0x0);
-   write_u32_be(sp + 0x1E8, 0x0);
-   write_u32_be(sp + 0x1EC, 0x0);
-   s3 = sp;
-   a3 = 0x0;
-   t0 = read_u32_be(a0 + 0x2C);
-   a0 += 0x30;
-   s3 += 0x3F0;
-   s4 = 0x20;
-   proc_80040BC0();  // stores increments of s4 to s3. recursive
+   memset(some_u16s, 0, sizeof(some_u16s));
+   some_offset = 0x0; // no idea, used in proc_80040A60
+   some_flags = read_u32_be(&a0p[0x2C]); // used in proc_80040A60
+   in_ptr = &a0p[0x30];
+   u32 val = 0x20;
+   proc_80040BC0(DIM(some_u32s)-4, &val); // recursive
    
    t1 = v0;
-   t5 = 0;
-   t6 = 0;
    t7 = 0;
 
-   do {
-      do  { // .Ltkmk00decode_104: # 800406D4
-         t9 = read_u16_be(a2);
+   for (row = 0; row != height; row++) {
+      for (col = 0; col != width; col++) {
+         t9 = read_u16_be(a2p);
          
          if (t9 == 0) {
-            v1 = *(u8*)a1; // likely BDS
+            v1 = a1p[0];
          } else {
             s3 = t9 & 0xFFFE;
             t7 = t9;
-            if (s2 != s3) {
+            if (alpha != s3) {
                goto tkmk00decode_448;
             }
-            write_u16_be(a2, s3);
+            write_u16_be(a2p, s3);
             t7 = s3;
             goto tkmk00decode_448;
-         } // Ltkmk00decode_12C
+         }
          v1 += 1;
          proc_80040AC8();
          
          if (v0 == 0) {
-            write_u16_be(a2, t7);
+            write_u16_be(a2p, t7);
             goto tkmk00decode_448;
-         } // Ltkmk00decode_144
+         }
          
          v1 = 1;
          proc_80040A60();
@@ -169,51 +113,40 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
             s1 = s4;
             proc_80040C54();
             
-            s5 = 0;
-            s6 = 0;
-            if (t6 != 0) {
-               s3 = t4 << 1;
-               t9 = a2 - s3;
-               s5 = read_u16_be(t9);
-               s6 = read_u16_be(a2 - 2);
-            } else { // .Ltkmk00decode_18C: # 8004075C
-               if (t5 != 0) {
-                  s6 = read_u16_be(a2 - 2);
+            rgba0 = 0;
+            rgba1 = 0;
+            if (row != 0) {
+               rgba0 = read_u16_be(a2p - (width * 2));
+               rgba1 = read_u16_be(a2p - 2);
+            } else {
+               if (col != 0) {
+                  rgba1 = read_u16_be(a2p - 2);
                }
-            } // .Ltkmk00decode_198: # 80040768
-            t8 = s5 & 0x7C0; // this is also performed in beql at Ltkmk00decode_18C
-            t9 = s6 & 0x7C0;
-            t8 >>= 6;
-            t9 >>= 6;
-            t8 += t9;
-            t8 >>= 1;
+            }
+
+            red0 = (rgba0 & 0x7C0) >> 6;
+            red1 = (rgba1 & 0x7C0) >> 6;
+            t8 = (red0 + red1) / 2;
             t9 = s0;
             proc_80040C94();
+            s0 = t9;
             
             v1 = t9 - t8;
-            s0 = t9;
-            t8 = s5 & 0xF800;
-            t9 = s6 & 0xF800;
-            t8 >>= 11;
-            t9 >>= 11;
-            t8 += t9;
-            t8 >>= 1;
-            t8 += v1;
+            green0 = (rgba0 & 0xF800) >> 11;
+            green1 = (rgba1 & 0xF800) >> 11;
+            t8 = v1 + (green0 + green1) / 2;
             if (t8 >= 0x20) {
                t8 = 0x1F;
-            } else if (t8 < 0) { // .Ltkmk00decode_1F0: # 800407C0
+            } else if (t8 < 0) {
                t8 = 0;
-            } // .Ltkmk00decode_1FC: # 800407CC
+            }
             t9 = s1;
             proc_80040C94();
             s1 = t9;
-            t8 = s5 & 0x3E;
-            t9 = s6 & 0x3E;
-            t8 >>= 1;
-            t9 >>= 1;
-            t8 += t9;
-            t8 >>= 1;
-            t8 += v1;
+
+            blue0 = (rgba0 & 0x3E) >> 1;
+            blue1 = (rgba1 & 0x3E) >> 1;
+            t8 = v1 + (blue0 + blue1) / 2;
             if (t8 >= 0x20) {
                t8 = 0x1F;
             } else if (t8 < 0) {
@@ -221,354 +154,297 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
             }
             t9 = s4;
             proc_80040C94();
-            s0 <<= 6;
-            s1 <<= 11;
-            t9 <<= 1;
-            t8 = s0 | s1;
-            t7 = t8 | t9;
-            s5 = 0x3F; // likely BDS and below
-            if (t7 != s2) {
+
+            t7 = (s1 << 11) | (s0 << 6) | (t9 << 1);
+            if (t7 != alpha) {
                t7 |= 0x1;
-            } // .Ltkmk00decode_270: # 80040840
-            s6 = sp + 0x7C;
+            }
             
-            // like an overlapped memmove, shifting everything by two bytes right
-            do {
-               s7 = read_u16_be(s6);
-               s5 -= 1;
-               s6 -= 2;
-               write_u16_be(s6 + 4, s7);
-            } while (s5 != 0);
-            write_u16_be(s6 + 2, t7);
-         } else { // .Ltkmk00decode_290: # 80040860
+            // insert new value by shifting others to right
+            for (i = DIM(rgba_buf) - 1; i > 0; i--) {
+               rgba_buf[i] = rgba_buf[i - 1];
+            }
+            rgba_buf[0] = t7;
+         } else {
             v1 = 6;
             proc_80040A60();
-            v0 <<= 1;
-            s6 = sp + v0; // s6 = sp + v0
-            t7 = read_u16_be(s6);
+            t7 = rgba_buf[v0];
             if (v0 != 0) {
-               do { // .Ltkmk00decode_2A8: # 80040878
-                  s7 = read_u16_be(s6 - 2);
-                  s6 -= 2;
-                  write_u16_be(s6 + 2, s7);
-               } while (s6 != sp);
-               write_u16_be(s6, t7);
+               for (i = v0; i > 0; i--) {
+                  rgba_buf[i] = rgba_buf[i - 1];
+               }
+               rgba_buf[0] = t7;
             }
-         } // .Ltkmk00decode_2BC: # 8004088C
-         write_u16_be(a2, t7);
-         t9 = 0;
-         if (t5 != 0) {
-            t9 |= 0x01;
          }
-         s5 = t4 - 1;
-         if (t5 < s5) { // .Ltkmk00decode_2CC: # 8004089C
-            t9 |= 0x02;
+         write_u16_be(a2p, t7);
+         test_bits = 0;
+         if (col != 0) {
+            test_bits |= 0x01;
+         }
+         s5 = width - 1;
+         if (col < s5) {
+            test_bits |= 0x02;
          } 
-         s6 = t4 - 2; // likely BDS and below
-         if (t5 < s6) { // .Ltkmk00decode_2E4: # 800408B4
-            t9 |= 0x04;
+         s6 = width - 2;
+         if (col < s6) {
+            test_bits |= 0x04;
          }
-         s5 = t3 - 1; // likely BDS and below
-         if (t6 < s5) { // .Ltkmk00decode_2F8: # 800408C8
-            t9 |= 0x08;
+         s5 = height - 1;
+         if (row < s5) {
+            test_bits |= 0x08;
          }
-         s6 = t3 - 2; // likely BDS and below
-         if (t6 < s6) { // .Ltkmk00decode_30C: # 800408DC
-            t9 |= 0x10;
-         } // .Ltkmk00decode_320: # 800408F0
+         s6 = height - 2;
+         if (row < s6) {
+            test_bits |= 0x10;
+         }
 
-         s7 = t9 & 0x2; // likely BDS and not
-         if (s7 == 2) { // .Ltkmk00decode_320: # 800408F0
-            s4 = *(u8*)(a1 + 1);
-            s4 += 1;
-            *(u8*)(a1 + 1) = s4;
+         if (0x2 == (test_bits & 0x2)) {
+            a1p[1]++;
          } 
-
-         s6 = t9 & 0x4; // likely BDS and not
-         if (s6 == 4) { // .Ltkmk00decode_33C: # 8004090C
-            s4 = *(u8*)(a1 + 2);
-            s4 += 1;
-            *(u8*)(a1 + 2) = s4;
+         if (0x4 == (test_bits & 0x4)) {
+            a1p[2]++;
          }
-         
-         s7 = t9 & 0x9; // likely BDS and not
-         s5 = a1 + t4;
-         if (s7 == 9)  {
-            s4 = *(u8*)(s5 - 1);
-            s4 += 1;
-            *(u8*)(s5 - 1) = s4;
-         } // .Ltkmk00decode_370: # 80040940
-         
-         s6 = t9 & 0x8;
-         if (s6 == 8) {
-            s4 = *(u8*)(s5);
-            s4 += 1;
-            *(u8*)(s5) = s4;
+         if (0x9 == (test_bits & 0x9))  {
+            a1p[width - 1]++;
          }
-         
-         s7 = t9 & 0xA; // likely BDS and not
-         if (s7 == 0xA) { // .Ltkmk00decode_390: # 80040960
-            s4 = *(u8*)(s5 + 1);
-            s4 += 1;
-            *(u8*)(s5 + 1) = s4;
+         if (0x8 == (test_bits & 0x8)) {
+            a1p[width]++;
          }
-         
-         s7 = t9 & 0x10; // likely BDS and not
-         s6 = s5 + t4;
-         if (s7 == 0x10) { // .Ltkmk00decode_3AC: # 8004097C
-            s4 = *(u8*)(s6);
-            s4 += 1;
-            *(u8*)(s6) = s4;
-         } // .Ltkmk00decode_3C4: # 80040994
+         if (0xA == (test_bits & 0xA)) {
+            a1p[width + 1]++;
+         }
+         if (0x10 == (test_bits & 0x10)) {
+            a1p[2*width]++;
+         }
          
          v1 = 1;
          proc_80040A60();
          
          if (v0 != 0) {
-            s1 = a2;
-            s0 = t4 << 1;
+            u8 *out = a2p;
+            s0 = width * 2;
             s3 = t7 | 0x1;
             
-            do { // .Ltkmk00decode_3E0: # 800409B0
+            do {
                v1 = 2;
                proc_80040A60();
-               if (v0 == 0) { // bnezl $v0, .Ltkmk00decode_41C
+               if (v0 == 0) {
                   v1 = 1;
                   proc_80040A60();
   
                   if (v0 == 0) {
-                     break; // beql  $v0, $zero, .Ltkmk00decode_44C
+                     break;
                   } else {
                      v1 = 1;
                      proc_80040A60();
-                     s1 += 4;
+                     out += 4;
                      if (v0 == 0) {
-                        s1 -= 8;
+                        out -= 8;
                      }
-                     // b     .Ltkmk00decode_43C
                   }
-               } else if (v0 == 1) { // .Ltkmk00decode_41C: # 800409EC
-                  s1 -= 2;
-                  // b     .Ltkmk00decode_43C
-               } else if (v0 == 3) { // .Ltkmk00decode_430: # 80040A00
-                  s1 += 2;
-               } // .Ltkmk00decode_43C: # 80040A0C
-               s1 += s0; // likely BDS and not cases
-               write_u16_be(s1, s3);
-            } while (1); // b     .Ltkmk00decode_3E0
+               } else if (v0 == 1) {
+                  out -= 2;
+               } else if (v0 == 3) {
+                  out += 2;
+               }
+               out += s0;
+               write_u16_be(out, s3);
+            } while (1);
          }
 tkmk00decode_448:
-         t5 += 1; // likely BDS and not cases
-         a1 += 1;
-         a2 += 2;
-      } while (t5 != t4);
-      t6 += 1;
-      t5 = 0;
-   } while (t6 != t3);
-} // tkmk00decode
+         a1p += 1;
+         a2p += 2;
+      } while (col != width);
+   } while (row != height);
+}
 
 // inputs: a0, a3, v1, t0
 // outputs: a0, a3, t0, t8, t9, v0
 static void proc_80040A60(void) // 80040A60/041660
 {
-   TRACE(__func__);
-   t9 = a3 + v1;
-   t8 = 0x20;
-   t8 -= v1;
-   v0 = SRL(t0, t8); // v0 = t0 >> t8;
-   if (t9 < 0x21) {
-      if (t9 != 0x20) {
-         t0 <<= v1;
-         a3 += v1;
+   unsigned this_offset;
+   this_offset = some_offset + v1;
+   t8 = 0x20 - v1;
+   v0 = SRL(some_flags, t8); // v0 = t0 >> t8;
+   if (this_offset < 0x21) {
+      if (this_offset != 0x20) {
+         some_flags <<= v1;
+         some_offset += v1;
          return;
-      } else { // .Lproc_80040A60_34: # 80040A94
-         t0 = read_u32_be(a0); // likely BDS
-         a3 = 0;
-         a0 += 4;
+      } else {
+         some_flags = read_u32_be(in_ptr);
+         some_offset = 0;
+         in_ptr += 4;
          return;
       }
-   } else { // .Lproc_80040A60_40: # 80040AA0
-      t9 = 0x40;
-      t0 = read_u32_be(a0);
-      t9 -= v1;
-      t9 -= a3;
-      a3 -= t8;
-      t8 = SRL(t0, t9); // t8 = t0 >> t9;
+   } else {
+      this_offset = 0x40;
+      some_flags = read_u32_be(in_ptr);
+      this_offset -= v1;
+      this_offset -= some_offset;
+      some_offset -= t8;
+      t8 = SRL(some_flags, this_offset); // t8 = t0 >> t9;
       v0 |= t8;
-      a0 += 4;
-      t0 <<= a3;
+      in_ptr += 4;
+      some_flags <<= some_offset;
       return;
    }
-} // proc_80040A60
+}
 
 // inputs: t2, v1
 // outputs: t8, t9, s6, s7, v0
 static void proc_80040AC8(void) // 80040AC8/0416C8
 {
-   TRACE(__func__);
-   t8 = SRL(t2, v1); // t8 = t2 >> v1;
+   u8 *s6ptr;
+   t8 = SRL(header6, v1); // t8 = t2 >> v1;
    t9 = t8 & 0x1;
-   s7 = v1 << 1;
-   t8 = sp + s7;
-   s7 = read_u16_be(t8 + 0x1E0);
+   s7 = some_u16s[v1];
    if (t9 == 0) {
-      t9 = v1 << 2;
-      t9 += sp;
-      s6 = read_u32_be(t9 + 0x1C0);
+      s6ptr = some_ptrs[v1];
       if (s7 == 0) {
-         s6 += 4;
+         s6ptr += 4;
          s7 = 0x20;
-         write_u32_be(t9 + 0x1C0, s6);
-      } // Lproc_80040AC8_34
-      t9 = read_u32_be(s6);
+         some_ptrs[v1] = s6ptr;
+      }
+      t9 = read_u32_be(s6ptr);
       s7 -= 1;
-      write_u16_be(t8 + 0x1E0, s7);
+      some_u16s[v1] = s7;
       v0 = SRL(t9, s7); // v0 = t9 >> s7;
       v0 &= 0x1;
       return;
-   } // Lproc_80040AC8_4C
-   t9 = v1 << 2;
-   t9 += sp;
-   s5 = sp + v1;
-   s6 = read_u32_be(t9 + 0x1C0);
+   }
+   s6ptr = some_ptrs[v1];
    if (s7 == 0) {
-      s7 = *(i8*)s6;
+      s7 = *s6ptr;
       v0 = 0x100;
-      v0 <<= v1; // likely BDS
+      v0 <<= v1;
       if ((s7 & 0x80) == 0x00) { // if (s7 >= 0) {
          v0 = ~v0;
          s7 += 3;
-         t2 &= v0;
-      } else { // .Lproc_80040AC8_88: # 80040B50
+         header6 &= v0;
+      } else {
          s7 &= 0x7F;
          s7 += 1;
-         t2 |= v0;
-      } // .Lproc_80040AC8_94: # 80040B5C
-      v0 = *(u8*)(s6 + 1);
-      s6 += 2;
+         header6 |= v0;
+      }
+      v0 = s6ptr[1];
+      s6ptr += 2;
       s7 <<= 3;
-      *(u8*)(s5 + 0x1A0) = v0;
-      write_u32_be(t9 + 0x1C0, s6);
-   } // .Lproc_80040AC8_A8: # 80040B70
-   v0 = *(u8*)(s5 + 0x1A0);
+      byte_buffer[v1] = v0;
+      some_ptrs[v1] = s6ptr;
+   }
+   v0 = byte_buffer[v1];
    s7 -= 1;
-   write_u16_be(t8 + 0x1E0, s7);
+   some_u16s[v1] = s7;
    t8 = s7 & 0x7;
    v0 = SRL(v0, t8); // v0 >>= t8;
    v0 &= 0x1;
    if (t8 == 0 && s7 != 0) {
       t8 = 0x100;
       s7 = t8 << v1;
-      s7 &= t2;
+      s7 &= header6;
       if (s7 != 0) {
-         s7 = *(u8*)(s6);
-         s6 += 1;
-         *(u8*)(s5 + 0x1A0) = s7;
-         write_u32_be(t9 + 0x1C0, s6);
+         s7 = s6ptr[0];
+         s6ptr += 1;
+         byte_buffer[v1] = s7;
+         some_ptrs[v1] = s6ptr;
       }
-   } // .Lproc_80040AC8_F0: # 80040BB8
+   }
    return;
-} // proc_80040AC8
+}
 
 // inputs: s3, s4
 // outputs: v0, v1, s0, s1, s3, s4, s5
-static void proc_80040BC0(void) // 80040BC0/0417C0
+static void proc_80040BC0(u32 u32idx, u32 *val) // 80040BC0/0417C0
 {
-   TRACE(__func__);
-   // s3 used like stack
-   // save RA
-   s3 -= 8;
+   INFO("idx: %08X, val: %08X, %s\n",
+         u32idx, *val, __func__);
+   fflush(stdout);
+   fflush(stderr);
+
+   u32idx--;
    v1 = 0;
    proc_80040AC8();
 
    if (v0 != 0) {
-      write_u32_be(s3 + 4, s4);
-      s4 += 1;
-      proc_80040BC0();
-      s5 = read_u32_be(s3 + 4);
-      s5 <<= 1;
-      s5 += sp;
-      write_u16_be(s5 + 0x80, v0);
-      proc_80040BC0();
-      s5 = read_u32_be(s3 + 4);
-      s3 += 8;
-      s6 = s5;
-      s5 <<= 1;
-      s5 += sp;
-      write_u16_be(s5 + 0xFE, v0);
-
-      // restore RA
+      u32 idx;
+      some_u32s[u32idx] = *val;
+      (*val)++;
+      proc_80040BC0(u32idx, val);
+      idx = some_u32s[u32idx];
+      buffer80_u16[idx] = v0;
+      proc_80040BC0(u32idx, val);
+      idx = some_u32s[u32idx];
+      u32idx++;
+      s6 = idx;
+      bufferFE_u16[idx] = v0;
       v0 = s6;
       return;
    } else {
-      s0 = 0; // likely BDS
-   } // .Lproc_80040BC0_64: # 80040C24
+      s0 = 0;
+   }
    s1 = 5;
    do {
       v1 = 0;
       proc_80040AC8();
-      s0 <<= 1;
+      s0 = v0 + s0 * 2;
       s1 -= 1;
-      s0 += v0;
    } while (s1 != 0);
-   // restore RA
-   s3 += 8;
+   u32idx++;
    v0 = s0;
    return;
-} // proc_80040BC0
+}
 
 // inputs: t1
 // outputs: s4, v0
 static void proc_80040C54(void) // 80040C54/041854
 {
-   TRACE(__func__);
    s4 = t1;
-   while (s4 >= 0x20) { // .Lproc_80040C54_8: # 80040C5C
+   while (s4 >= 0x20) {
       v1 = 0;
       proc_80040AC8();
-      v1 = s4 << 1;
-      t8 = sp + v1;
-      // TODO: read_s16_be ?
       if (v0 == 0) {
-         s4 = read_u16_be(t8 + 0x80);
+         s4 = buffer80_u16[s4];
       } else {
-         s4 = read_u16_be(t8 + 0xFE);
+         s4 = bufferFE_u16[s4];
       }
-   } // .Lproc_80040C54_38: # 80040C8C
-} // proc_80040C54
+   }
+}
 
 // inputs: t8, t9
 // outputs: v0, t9
 static void proc_80040C94(void) // 80040C94/041894
 {
-   TRACE(__func__);
    if (t8 >= 0x10) {
-      v0 = 0x1F;
-      v0 -= t8;
-      v0 <<= 1;
+      v0 = (0x1F - t8) * 2;
       if (v0 < t9) {
          v0 = 0x1F;
          t9 = v0 - t9;
          return;
       } else {
-         v0 = t9 & 0x1; // likely BDS
-      } // .Lproc_80040C94_34: # 80040CC8
-Lproc_80040C94_34:
+         v0 = t9 & 0x1;
+      }
       t9 = SRL(t9, 1); // t9 >>= 1;
       if (v0 != 0) {
-         t9 += t8;
-         t9 += 1;
+         t9 += t8 + 1;
          return;
-      } // .Lproc_80040C94_48: # 80040CDC
-      t9 = t8 - t9;
-      return;
+      } else {
+         t9 = t8 - t9;
+         return;
+      }
    } else {
-      v0 = t8 << 1; // likely BDS
-   } // .Lproc_80040C94_54: # 80040CE8
-   // TODO: this branch isn't a loop, just reuses code above
+      v0 = t8 << 1;
+   }
    if (v0 >= t9) {
-      v0 = t9 & 0x1; // likely BDS
-      goto Lproc_80040C94_34;
+      v0 = t9 & 0x1;
+      t9 = SRL(t9, 1); // t9 >>= 1;
+      if (v0 != 0) {
+         t9 += t8 + 1;
+         return;
+      } else {
+         t9 = t8 - t9;
+         return;
+      }
    }
    return;
-} // proc_80040C94
+}

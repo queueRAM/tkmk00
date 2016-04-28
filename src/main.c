@@ -21,7 +21,7 @@ static const tkmk00_config_t default_config =
 {
    NULL, // input filename
    NULL, // output directory
-   0x01, // A3
+   0x01, // color to clear alpha
    0xFFFFFFFF, // offset
 };
 
@@ -32,7 +32,7 @@ static void print_usage(void)
          "tkmk00test v" TKMK00_VERSION ": Mario Kart 64 TKMK00 decoder\n"
          "\n"
          "Optional arguments:\n"
-         " -a ALPHA     value used as alpha mask [usually 0x01 or 0xBE] (default: 0x%02X)\n"
+         " -a ALPHA     RGBA color to clear alpha bit [usually 0x01 or 0xBE] (default: 0x%02X)\n"
          " -d DIR       output directory (default: FILE.tkmk00)\n"
          " -o OFFSET    offset of TKMK00 data in FILE (default: all)\n"
          " -v           verbose progress output\n"
@@ -126,9 +126,9 @@ static void extract_tkmk00(unsigned char *buf, char *out_dir, unsigned int offse
    }
 
    // allocate output memory
-   out_size = 1 * MB;
-   a1_buf = malloc(out_size);
-   a2_buf = malloc(out_size);
+   out_size = 512 * KB;
+   a1_buf = calloc(1, out_size);
+   a2_buf = calloc(1, out_size);
 
    w = read_u16_be(&buf[offset + 0x8]);
    h = read_u16_be(&buf[offset + 0xA]);
