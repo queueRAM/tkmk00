@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-static i32 t1, t7, t8, t9, s0, s1, s3, s4, s5, s6, s7, v0, v1;
+static i32 t1, t7, t8, t9, s0, s1, s3, s4, s6, s7, v0, v1;
 
 // 0x400 allocated on stack
 static u16 rgba_buf[0x40];     // SP[000]-SP[07F] - buffer of 32 RGBA colors
@@ -181,20 +181,16 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
          if (col != 0) {
             test_bits |= 0x01;
          }
-         s5 = width - 1;
-         if (col < s5) {
+         if (col < (width - 1)) {
             test_bits |= 0x02;
          } 
-         s6 = width - 2;
-         if (col < s6) {
+         if (col < (width - 2)) {
             test_bits |= 0x04;
          }
-         s5 = height - 1;
-         if (row < s5) {
+         if (row < (height - 1)) {
             test_bits |= 0x08;
          }
-         s6 = height - 2;
-         if (row < s6) {
+         if (row < (height - 2)) {
             test_bits |= 0x10;
          }
 
@@ -254,8 +250,8 @@ void tkmk00decode(u8 *a0p, u8 *a1p, u8 *a2p, u32 a3p)  // 800405D0/0411D0
 tkmk00decode_448:
          a1p += 1;
          a2p += 2;
-      } while (col != width);
-   } while (row != height);
+      }
+   }
 }
 
 // inputs: a0, a3, v1, t0
@@ -354,14 +350,9 @@ static void proc_80040AC8(void) // 80040AC8/0416C8
 }
 
 // inputs: s3, s4
-// outputs: v0, v1, s0, s1, s3, s4, s5
+// outputs: v0, v1, s0, s1, s3, s4
 static void proc_80040BC0(u32 u32idx, u32 *val) // 80040BC0/0417C0
 {
-   INFO("idx: %08X, val: %08X, %s\n",
-         u32idx, *val, __func__);
-   fflush(stdout);
-   fflush(stderr);
-
    u32idx--;
    v1 = 0;
    proc_80040AC8();
