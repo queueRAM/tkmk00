@@ -1,92 +1,210 @@
-Mario Kart 64 TKMK00 Format
+Mario Kart 64 TKMK00 Format and Menu System
 
 The TKMK00 format is stores some textures in the Mario Kart 64 title and menu screens.
 
-Functions:
+----------------------
+Functions
+----------------------
+// calls DmaCopy* and tkmk00decode/mio0decode
+// a0: segment address
+// a1: 0,1,-1
+proc_800996BC(a0, a1); // 800996BC/09A2BC
 
 // a0[in]: pointer to TKMK00 data
 // a1[out]: pointer to output (a0->h8*a0->hA words)
 // a2[out]: pointer to output (a0->h8*a0->hA*2 words)
 // a3[in]: byte? values observed: 0x01, 0xBE
-void tkmk00_decode(a0, a1, a2, a3) 800405D0/0411D0
+void tkmk00_decode(a0, a1, a2, a3); // 800405D0/0411D0
 
-Examples:
-7FA3C0: 54 4B 4D 4B 30 30 06 0F  00 DC 00 20 00 00 06 B8
-7FA3D0: 00 00 09 88 00 00 0A 2C  00 00 0A A0 00 00 0B 08
-7FA3E0: 00 00 0B 70 00 00 0B B4  00 00 0B DC AA 02 04 06
-7FA3F0: 02 03 AA AA A9 AA 80 15  55 09 08 9F C0 42 05 E6
+// a0: segmented offset
+// a1: length in bytes
+// a2: Vaddr of destination
+// Computes source ROM offset = (a0 & 0xFFFFFF) + 729A30
+// uses OSMesgQueue at 0x8014EF58
+void DmaCopyBase729A30(a0, a1, a2); // 80099000/099C00
 
-7FAFC0: 54 4B 4D 4B 30 30 06 0F  00 82 00 20 00 00 03 EC 
-7FAFD0: 00 00 07 34 00 00 07 90  00 00 07 D8 00 00 08 14 
-7FAFE0: 00 00 08 5C 00 00 08 94  00 00 08 B8 BA AA AA AA 
-7FAFF0: AA AA AA A8 01 75 55 55  55 55 55 55 50 03 AA AA
+// a0: segmented offset
+// a1: length in bytes
+// a2: Vaddr of destination
+// Computes source ROM offset = (a0 & 0xFFFFFF) + 7FA3C0
+// uses OSMesgQueue at 0x8014EF58
+void DmaCopyBase7FA3C0(a0, a1, a2); // 80099088/099C88
 
-List of TKMK00 blocks:
-7FA3C0: 'Player Select'
-7FAFC0: 
-7FB8C0: DK's name on player select
-7FBAC0: 
-7FBCC0: 
-7FBEC0: 
-7FC0C0: 
-7FC2C0: 
-7FC4C0: 
-7FC6C0: 
-7FC8C0: 
-7FCDC0: 
-7FD2C0: 
-7FD7C0: 
-7FDDC0: 
-7FE1C0: 
-7FE6C0: 
-7FEBC0: 
-7FEFC0: 
-7FF3C0: 
-7FF7C0: 
-7FFCC0: 
-8000C0: 
-8004C0: 
-8008C0: 
-800DC0: 
-8010C0: 
-8014C0: 
-8018C0: 
-801EC0: 
-8021C0: 
-802DC0: 
-8031C0: 
-8035C0: 
-8039C0: 
-803DC0: 
-8049C0: 
-804EC0: 
-8055C0: 
-805FC0: 
-806AC0: 
-806DC0: 
-8071C0: 
-8075C0: 
-8078C0: 
-807BC0: 
-807EC0: 
-8080C0: 
-8082C0: 
-8084C0: 
-8086C0: 
-8089C0: 
-808CC0: 
-808EC0: 
-8090C0: 
-8092C0: 
-8094C0: 
-8162C0: 
-81F6C0: 
-8202C0: 
-8209C0: 
-820AC0: 
-820FC0: 
+----------------------
+List of TKMK00 blocks
+----------------------
+Offset  A3  Description
+7FA3C0  01  "PLAYER SELECT" title
+7FAFC0  01  "OPTION" title
+7FB8C0  01  "D.K."
+7FBAC0  01  "TOAD"
+7FBCC0  01  "BOWSER"
+7FBEC0  01  "LUIGI"
+7FC0C0  01  "MARIO"
+7FC2C0  01  "PEACH"
+7FC4C0  01  "WARIO"
+7FC6C0  01  "YOSHI"
+7FC8C0  01  "MARIO RACEWAY"
+7FCDC0  01  "CHOCO MOUNTAIN"
+7FD2C0  01  "BOWSER'S CASTLE"
+7FD7C0  01  "BANSHEE BOARDWALK"
+7FDDC0  01  "YOSHI VALLEY"
+7FE1C0  01  "FRAPPE SNOWLAND"
+7FE6C0  01  "KOOPA TROOPA BEACH"
+7FEBC0  01  "ROYAL RACEWAY"
+7FEFC0  01  "LUIGI RACEWAY"
+7FF3C0  01  "MOO MOO FARM"
+7FF7C0  01  "TOAD'S TURNPIKE"
+7FFCC0  01  "KALIMARI DESERT"
+8000C0  01  "SHERBET LAND"
+8004C0  01  "RAINBOW ROAD"
+8008C0  01  "WARIO STADIUM"
+800DC0  01  "BLOCK FORT"
+8010C0  01  "SKYSCRAPER"
+8014C0  01  "DOUBLE DECK"
+8018C0  01  "D.K.'S JUNGLE PARKWAY"
+801EC0  01  "BIG DONUT"
+8021C0  01  "MAP SELECT" title
+802DC0  01  "FLOWER CUP"
+8031C0  01  "MUSHROOM CUP"
+8035C0  01  "STAR CUP"
+8039C0  01  "SPECIAL CUP"
+803DC0  01  "GAME SELECT" title
+8049C0  BE  "1P GAME" with Mario face
+804EC0  BE  "2P GAME" with Mario, Luigi faces
+8055C0  BE  "3P GAME" with Mario, Luigi, Peach faces
+805FC0  BE  "4P GAME" with Mario, Luigi, Peach, Toad faces
+806AC0  BE  "BATTLE" mode option
+806DC0  BE  "T.TRIALS" mode option
+8071C0  BE  "MARIO GP" mode option
+8075C0  BE  "VS" mode option
+8078C0  BE  "L OPTION" main menu button
+807BC0  BE  "R DATA" main menu button
+807EC0  BE  "50 cc" class option
+8080C0  BE  "100 cc" class option
+8082C0  BE  "150 cc" class option
+8084C0  BE  "EXTRA" class option
+8086C0  BE  "アイテムなし" ("without item") unused
+8089C0  BE  "アイテムあり" ("with item") unused
+808CC0  BE  "BEGIN" option
+808EC0  BE  "GHOST" option
+8090C0  BE  "DATA" option
+8092C0  BE  "OK ?" confirmation option
+8094C0  01  title screen background
+8162C0  01  main menu background
+81F6C0  01  some green/gold bar
+8202C0  01  some gold bar
+8209C0  01  some white bar
+820AC0  01  some pink bar
+820FC0  01  some gold bar
+
+L Option Menu
+8094C0: title background 544B4D4B 3030C20F 014000F0 00005F00
+8092C0: "OK ?"           544B4D4B 3030020F 001F0013 000000C4
+7FAFC0: "OPTION" title   544B4D4B 3030060F 00820020 000003EC
+
+----------------------
+Example TKMK00 Header
+----------------------
+8025CB50/8094C0 is first loaded for title screen
+
+8094C0: 54 4B 4D 4B 30 30 C2 0F  01 40 00 F0 00 00 5F 00 
+8094D0: 00 00 B0 80 00 00 B7 5C  00 00 BC 2C 00 00 C0 9C 
+8094E0: 00 00 C4 B0 00 00 C8 60  00 00 CB 70 B3 3F 19 9E 
+8094F0: 33 19 FF 66 00 E4 70 E1  D1 80 FF D3 00 40 90 5E 
+
+0x8: w = 0x0140 = 320
+0xA: h = 0x00F0 = 240
+
+------------------
+Menu System
+------------------
+
+Segment 02: base = 801978D0
+Title Screen:
+A0 = 02004598, A1 = 0, RA = 8009ECCC
+  02004598 -> SegmentedToVirtual -> 8019BE68 (ROM 12F078)
+  00000000 0B00F100 014000F0 00000000
+  CD600000 00000000 00000000
+
+Main Menu:
+A0 = 02004598, A1 = 0, RA = 8009ED3C
+
+A0 = 02004B74, A1 = 0, RA = 8009ED4C
+  02004B74 = 8019C444 (ROM 12F654)
+  00010000 0B00EF00 001F0013 010800CA
+  00000000 00000000 00000000 
+  0B00EF00 8092C0 "OK ?"
+
+A0        A1  RA        0x4(A0)   ROM     Description
+8019BF30  0   8009EDC0  0B009A00  803DC0  "Game Select"
+                     -> 0B00EF00  8092C0  "OK ?"
+8019C05C  0   8009EDF4  0B00BC00  805FC0  "4P GAME"
+                     -> 0B00D200  8075C0  "VS"
+                     -> 0B00C700  806AC0  "BATTLE"
+8019C00C  0   8009EDF4  0B00B200  8055C0  "3P GAME"
+8019BFA8  0   8009EDF4  0B00AB00  804EC0  "2P GAME"
+                     -> 0B00CE00  8071C0  "MARIO GP"
+8019BF58  0   8009EDF4  0B00A600  8049C0  "1P GAME"
+                     -> 0B00CA00  806DC0  "T.TRIALS"
+8019C14C  0   8009EDC0  0B00EF00  8092C0  "OK ?"
+8019C19C  0   8009EDC0  0B00D800  807BC0  "R DATA"
+8019C174  0   8009EDC0  0B00D500  8078C0  "L OPTION"
+8019C214  0   8009EDC0  0B00DF00  8082C0  "150 cc"
+8019C1EC  0   8009EDC0  0B00DD00  8080C0  "100 cc"
+8019C1C4  0   8009EDC0  0B00DB00  807EC0  "50 cc"
+8019C304  0   8009EDC0  0B00ED00  8090C0  "DATA"
+8019C2B4  0   8009EDC0  0B00E900  808CC0  "BEGIN"
+
+Character Select (1P Grand Prix):
+A0        A1  RA        0x4(A0)           Description
+02004598  0   8009ED3C  0B00F100  8094C0  title screen background
+02004B74  0   8009ED4C  0B00EF00  8092C0  "OK ?"
+02004B4C  0   8009EE20  0B000000  7FA3C0  "PLAYER SELECT"
+02004B74  0   8009ED4C  0B00EF00  8092C0  "OK ?"
+020051C8  1   800996AC  0A000000  729A30  Mario face
+020051C8  1   800996AC  0A000000  729A30  Mario face
+8019935C  0   8009EEC8  0B001D00  7FC0C0  "MARIO"
+02005470  1   800996AC  0A00DA64  737494  Luigi face
+02005470  1   800996AC  0A00DA64  737494  Luigi face
+80199334  0   8009EEC8  0B001B00  7FBEC0  "LUIGI"
+020059C0  1   800996AC  0A01AC44  744674  Peach face
+020059C0  1   800996AC  0A01AC44  744674  Peach face
+80199384  0   8009EEC8  0B001F00  7FC2C0  "PEACH"
+02005718  1   800996AC  0A02AED0  754900  Toad face
+02005718  1   800996AC  0A02AED0  754900  Toad face
+801992E4  0   8009EEC8  0B001700  7FBAC0  "TOAD"
+02005C68  1   800996AC  0A035794  75F1C4  Yoshi face
+02005C68  1   800996AC  0A035794  75F1C4  Yoshi face
+801993D4  0   8009EEC8  0B002300  7FC6C0  "YOSHI"
+02005F10  1   800996AC  0A040ABC  76A4EC  D.K. face
+02005F10  1   800996AC  0A040ABC  76A4EC  D.K. face
+801992BC  0   8009EEC8  0B001500  7FB8C0  "D.K."
+020061B8  1   800996AC  0A0504D0  779F00  Wario face
+020061B8  1   800996AC  0A0504D0  779F00  Wario face
+801993AC  0   8009EEC8  0B002100  7FC4C0  "WARIO"
+02006460  1   800996AC  0A0637E0  78D210  Bowser face
+02006460  1   800996AC  0A0637E0  78D210  Bowser face
+8019930C  0   8009EEC8  0B001900  7FBCC0  "BOWSER"
+
+----------------------
+Menu Item Format
+----------------------
+Off.  L  Description
+0x00  2  If 1, A3 = 0xB3, else A3 = 0x01 to tkmk00_decode/800405D0
+0x02  ?  unused?
+0x04  4  Segmented offset from 7FA3C0 to pass to DmaCopyBase7FA3C0/80099088
+0x08  2  width in pixels
+0x0A  2  height in pixels
+0x0C  ?
+0x10  2
+0x12  ?
+0x14  ?
+0x18  4  submenu texture address? next offset?
+
 
 Other notes:
 http://origami64.net/showthread.php?tid=47&pid=1504
 http://www.romhacking.net/forum/index.php?topic=20263.0
 http://acmlm.kafuka.org/archive3/thread.php?id=3283
+https://github.com/RenaKunisaki/mariokart64/blob/master/old%20notes/TKMK.txt
