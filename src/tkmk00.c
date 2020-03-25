@@ -29,7 +29,7 @@ static void proc_80040BC0(uint32_t, uint32_t*);
 static void proc_80040C54(void);
 static void proc_80040C94(void);
 
-// this is needed to to logical shifts on signed data
+// this is needed to perform logical shifts on signed data
 static int32_t SRL(int32_t val, int amount)
 {
    uint32_t vU = (uint32_t)val;
@@ -53,7 +53,7 @@ void tkmk00_decode(uint8_t *tkmk, uint8_t *tmp_buf, uint8_t *rgba16, int32_t alp
    uint16_t rgba0;
    uint16_t rgba1;
    uint8_t red0, red1, green0, green1, blue0, blue1;
-   
+
    width = read_u16_be(&tkmk[0x8]);
    height = read_u16_be(&tkmk[0xA]);
    alpha = alpha_color;
@@ -62,7 +62,7 @@ void tkmk00_decode(uint8_t *tkmk, uint8_t *tmp_buf, uint8_t *rgba16, int32_t alp
    memset(rgba_buf, 0xFF, sizeof(rgba_buf));
    memset(rgba16, 0x0, 2 * pixels);
    memset(tmp_buf, 0x0, pixels);
-   
+
    for (i = 0; i < 8; i++) {
        offset = read_u32_be(&tkmk[0xC + i*4]);
        if (0 == (header6 & (0x1 << i))) {
@@ -77,181 +77,177 @@ void tkmk00_decode(uint8_t *tkmk, uint8_t *tmp_buf, uint8_t *rgba16, int32_t alp
    in_ptr = &tkmk[0x30];
    uint32_t val = 0x20;
    proc_80040BC0(DIM(some_u32s)-4, &val); // recursive
-   
+
    t1 = v0;
    t7 = 0;
 
    for (row = 0; row != height; row++) {
       for (col = 0; col != width; col++) {
          t9 = read_u16_be(rgba16);
-         
-         if (t9 == 0) {
-            v1 = tmp_buf[0];
-         } else {
+
+         if (t9 != 0) {
             s3 = t9 & 0xFFFE;
             t7 = t9;
-            if (alpha != s3) {
-               goto tkmk00decode_448;
+            if (alpha == s3) {
+               write_u16_be(rgba16, s3);
+               t7 = s3;
             }
-            write_u16_be(rgba16, s3);
-            t7 = s3;
-            goto tkmk00decode_448;
-         }
-         v1 += 1;
-         proc_80040AC8();
-         
-         if (v0 == 0) {
-            write_u16_be(rgba16, t7);
-            goto tkmk00decode_448;
-         }
-         
-         v1 = 1;
-         proc_80040A60();
-         
-         if (v0 != 0) {
-            proc_80040C54();
-            
-            s0 = s4;
-            proc_80040C54();
-            
-            s1 = s4;
-            proc_80040C54();
-            
-            rgba0 = 0;
-            rgba1 = 0;
-            if (row != 0) {
-               rgba0 = read_u16_be(rgba16 - (width * 2));
-               rgba1 = read_u16_be(rgba16 - 2);
-            } else {
-               if (col != 0) {
-                  rgba1 = read_u16_be(rgba16 - 2);
-               }
-            }
-
-            red0 = (rgba0 & 0x7C0) >> 6;
-            red1 = (rgba1 & 0x7C0) >> 6;
-            t8 = (red0 + red1) / 2;
-            t9 = s0;
-            proc_80040C94();
-            s0 = t9;
-            
-            v1 = t9 - t8;
-            green0 = (rgba0 & 0xF800) >> 11;
-            green1 = (rgba1 & 0xF800) >> 11;
-            t8 = v1 + (green0 + green1) / 2;
-            if (t8 >= 0x20) {
-               t8 = 0x1F;
-            } else if (t8 < 0) {
-               t8 = 0;
-            }
-            t9 = s1;
-            proc_80040C94();
-            s1 = t9;
-
-            blue0 = (rgba0 & 0x3E) >> 1;
-            blue1 = (rgba1 & 0x3E) >> 1;
-            t8 = v1 + (blue0 + blue1) / 2;
-            if (t8 >= 0x20) {
-               t8 = 0x1F;
-            } else if (t8 < 0) {
-               t8 = 0;
-            }
-            t9 = s4;
-            proc_80040C94();
-
-            t7 = (s1 << 11) | (s0 << 6) | (t9 << 1);
-            if (t7 != alpha) {
-               t7 |= 0x1;
-            }
-            
-            // insert new value by shifting others to right
-            for (i = DIM(rgba_buf) - 1; i > 0; i--) {
-               rgba_buf[i] = rgba_buf[i - 1];
-            }
-            rgba_buf[0] = t7;
          } else {
-            v1 = 6;
-            proc_80040A60();
-            t7 = rgba_buf[v0];
-            if (v0 != 0) {
-               for (i = v0; i > 0; i--) {
-                  rgba_buf[i] = rgba_buf[i - 1];
-               }
-               rgba_buf[0] = t7;
-            }
-         }
-         write_u16_be(rgba16, t7);
-         test_bits = 0;
-         if (col != 0) {
-            test_bits |= 0x01;
-         }
-         if (col < (width - 1)) {
-            test_bits |= 0x02;
-         } 
-         if (col < (width - 2)) {
-            test_bits |= 0x04;
-         }
-         if (row < (height - 1)) {
-            test_bits |= 0x08;
-         }
-         if (row < (height - 2)) {
-            test_bits |= 0x10;
-         }
+            v1 = tmp_buf[0];
+            v1 += 1;
+            proc_80040AC8();
 
-         if (0x2 == (test_bits & 0x2)) {
-            tmp_buf[1]++;
-         } 
-         if (0x4 == (test_bits & 0x4)) {
-            tmp_buf[2]++;
-         }
-         if (0x9 == (test_bits & 0x9))  {
-            tmp_buf[width - 1]++;
-         }
-         if (0x8 == (test_bits & 0x8)) {
-            tmp_buf[width]++;
-         }
-         if (0xA == (test_bits & 0xA)) {
-            tmp_buf[width + 1]++;
-         }
-         if (0x10 == (test_bits & 0x10)) {
-            tmp_buf[2*width]++;
-         }
-         
-         v1 = 1;
-         proc_80040A60();
-         
-         if (v0 != 0) {
-            uint8_t *out = rgba16;
-            s0 = width * 2;
-            s3 = t7 | 0x1;
-            
-            do {
-               v1 = 2;
+            if (v0 == 0) {
+               write_u16_be(rgba16, t7);
+            } else {
+               v1 = 1;
                proc_80040A60();
-               if (v0 == 0) {
-                  v1 = 1;
-                  proc_80040A60();
-  
-                  if (v0 == 0) {
-                     break;
+
+               if (v0 != 0) {
+                  proc_80040C54();
+
+                  s0 = s4;
+                  proc_80040C54();
+
+                  s1 = s4;
+                  proc_80040C54();
+
+                  rgba0 = 0;
+                  rgba1 = 0;
+                  if (row != 0) {
+                     rgba0 = read_u16_be(rgba16 - (width * 2));
+                     rgba1 = read_u16_be(rgba16 - 2);
                   } else {
-                     v1 = 1;
-                     proc_80040A60();
-                     out += 4;
-                     if (v0 == 0) {
-                        out -= 8;
+                     if (col != 0) {
+                        rgba1 = read_u16_be(rgba16 - 2);
                      }
                   }
-               } else if (v0 == 1) {
-                  out -= 2;
-               } else if (v0 == 3) {
-                  out += 2;
+
+                  red0 = (rgba0 & 0x7C0) >> 6;
+                  red1 = (rgba1 & 0x7C0) >> 6;
+                  t8 = (red0 + red1) / 2;
+                  t9 = s0;
+                  proc_80040C94();
+                  s0 = t9;
+
+                  v1 = t9 - t8;
+                  green0 = (rgba0 & 0xF800) >> 11;
+                  green1 = (rgba1 & 0xF800) >> 11;
+                  t8 = v1 + (green0 + green1) / 2;
+                  if (t8 >= 0x20) {
+                     t8 = 0x1F;
+                  } else if (t8 < 0) {
+                     t8 = 0;
+                  }
+                  t9 = s1;
+                  proc_80040C94();
+                  s1 = t9;
+
+                  blue0 = (rgba0 & 0x3E) >> 1;
+                  blue1 = (rgba1 & 0x3E) >> 1;
+                  t8 = v1 + (blue0 + blue1) / 2;
+                  if (t8 >= 0x20) {
+                     t8 = 0x1F;
+                  } else if (t8 < 0) {
+                     t8 = 0;
+                  }
+                  t9 = s4;
+                  proc_80040C94();
+
+                  t7 = (s1 << 11) | (s0 << 6) | (t9 << 1);
+                  if (t7 != alpha) {
+                     t7 |= 0x1;
+                  }
+
+                  // insert new value by shifting others to right
+                  for (i = DIM(rgba_buf) - 1; i > 0; i--) {
+                     rgba_buf[i] = rgba_buf[i - 1];
+                  }
+                  rgba_buf[0] = t7;
+               } else {
+                  v1 = 6;
+                  proc_80040A60();
+                  t7 = rgba_buf[v0];
+                  if (v0 != 0) {
+                     for (i = v0; i > 0; i--) {
+                        rgba_buf[i] = rgba_buf[i - 1];
+                     }
+                     rgba_buf[0] = t7;
+                  }
                }
-               out += s0;
-               write_u16_be(out, s3);
-            } while (1);
+               write_u16_be(rgba16, t7);
+               test_bits = 0;
+               if (col != 0) {
+                  test_bits |= 0x01;
+               }
+               if (col < (width - 1)) {
+                  test_bits |= 0x02;
+               }
+               if (col < (width - 2)) {
+                  test_bits |= 0x04;
+               }
+               if (row < (height - 1)) {
+                  test_bits |= 0x08;
+               }
+               if (row < (height - 2)) {
+                  test_bits |= 0x10;
+               }
+
+               if (0x2 == (test_bits & 0x2)) {
+                  tmp_buf[1]++;
+               }
+               if (0x4 == (test_bits & 0x4)) {
+                  tmp_buf[2]++;
+               }
+               if (0x9 == (test_bits & 0x9))  {
+                  tmp_buf[width - 1]++;
+               }
+               if (0x8 == (test_bits & 0x8)) {
+                  tmp_buf[width]++;
+               }
+               if (0xA == (test_bits & 0xA)) {
+                  tmp_buf[width + 1]++;
+               }
+               if (0x10 == (test_bits & 0x10)) {
+                  tmp_buf[2*width]++;
+               }
+
+               v1 = 1;
+               proc_80040A60();
+
+               if (v0 != 0) {
+                  uint8_t *out = rgba16;
+                  s0 = width * 2;
+                  s3 = t7 | 0x1;
+
+                  do {
+                     v1 = 2;
+                     proc_80040A60();
+                     if (v0 == 0) {
+                        v1 = 1;
+                        proc_80040A60();
+
+                        if (v0 == 0) {
+                           break;
+                        } else {
+                           v1 = 1;
+                           proc_80040A60();
+                           out += 4;
+                           if (v0 == 0) {
+                              out -= 8;
+                           }
+                        }
+                     } else if (v0 == 1) {
+                        out -= 2;
+                     } else if (v0 == 3) {
+                        out += 2;
+                     }
+                     out += s0;
+                     write_u16_be(out, s3);
+                  } while (1);
+               }
+            }
          }
-tkmk00decode_448:
          tmp_buf += 1;
          rgba16 += 2;
       }
@@ -270,12 +266,10 @@ static void proc_80040A60(void) // 80040A60/041660
       if (this_offset != 0x20) {
          some_flags <<= v1;
          some_offset += v1;
-         return;
       } else {
          some_flags = read_u32_be(in_ptr);
          some_offset = 0;
          in_ptr += 4;
-         return;
       }
    } else {
       this_offset = 0x40;
@@ -287,7 +281,6 @@ static void proc_80040A60(void) // 80040A60/041660
       v0 |= t8;
       in_ptr += 4;
       some_flags <<= some_offset;
-      return;
    }
 }
 
@@ -311,46 +304,45 @@ static void proc_80040AC8(void) // 80040AC8/0416C8
       some_u16s[v1] = s7;
       v0 = SRL(t9, s7); // v0 = t9 >> s7;
       v0 &= 0x1;
-      return;
-   }
-   s6ptr = some_ptrs[v1];
-   if (s7 == 0) {
-      s7 = *s6ptr;
-      v0 = 0x100;
-      v0 <<= v1;
-      if ((s7 & 0x80) == 0x00) { // if (s7 >= 0) {
-         v0 = ~v0;
-         s7 += 3;
-         header6 &= v0;
-      } else {
-         s7 &= 0x7F;
-         s7 += 1;
-         header6 |= v0;
-      }
-      v0 = s6ptr[1];
-      s6ptr += 2;
-      s7 <<= 3;
-      byte_buffer[v1] = v0;
-      some_ptrs[v1] = s6ptr;
-   }
-   v0 = byte_buffer[v1];
-   s7 -= 1;
-   some_u16s[v1] = s7;
-   t8 = s7 & 0x7;
-   v0 = SRL(v0, t8); // v0 >>= t8;
-   v0 &= 0x1;
-   if (t8 == 0 && s7 != 0) {
-      t8 = 0x100;
-      s7 = t8 << v1;
-      s7 &= header6;
-      if (s7 != 0) {
-         s7 = s6ptr[0];
-         s6ptr += 1;
-         byte_buffer[v1] = s7;
+   } else {
+      s6ptr = some_ptrs[v1];
+      if (s7 == 0) {
+         s7 = *s6ptr;
+         v0 = 0x100;
+         v0 <<= v1;
+         if ((s7 & 0x80) == 0x00) { // if (s7 >= 0) {
+            v0 = ~v0;
+            s7 += 3;
+            header6 &= v0;
+         } else {
+            s7 &= 0x7F;
+            s7 += 1;
+            header6 |= v0;
+         }
+         v0 = s6ptr[1];
+         s6ptr += 2;
+         s7 <<= 3;
+         byte_buffer[v1] = v0;
          some_ptrs[v1] = s6ptr;
       }
+      v0 = byte_buffer[v1];
+      s7 -= 1;
+      some_u16s[v1] = s7;
+      t8 = s7 & 0x7;
+      v0 = SRL(v0, t8); // v0 >>= t8;
+      v0 &= 0x1;
+      if (t8 == 0 && s7 != 0) {
+         t8 = 0x100;
+         s7 = t8 << v1;
+         s7 &= header6;
+         if (s7 != 0) {
+            s7 = s6ptr[0];
+            s6ptr += 1;
+            byte_buffer[v1] = s7;
+            some_ptrs[v1] = s6ptr;
+         }
+      }
    }
-   return;
 }
 
 // inputs: s3, s4
@@ -374,20 +366,16 @@ static void proc_80040BC0(uint32_t u32idx, uint32_t *val) // 80040BC0/0417C0
       s6 = idx;
       bufferFE_u16[idx] = v0;
       v0 = s6;
-      return;
    } else {
       s0 = 0;
+      for (s1 = 5; s1 != 0; s1--) {
+         v1 = 0;
+         proc_80040AC8();
+         s0 = v0 + s0 * 2;
+      }
+      u32idx++;
+      v0 = s0;
    }
-   s1 = 5;
-   do {
-      v1 = 0;
-      proc_80040AC8();
-      s0 = v0 + s0 * 2;
-      s1 -= 1;
-   } while (s1 != 0);
-   u32idx++;
-   v0 = s0;
-   return;
 }
 
 // inputs: t1
@@ -415,33 +403,27 @@ static void proc_80040C94(void) // 80040C94/041894
       if (v0 < t9) {
          v0 = 0x1F;
          t9 = v0 - t9;
-         return;
       } else {
          v0 = t9 & 0x1;
-      }
-      t9 = SRL(t9, 1); // t9 >>= 1;
-      if (v0 != 0) {
-         t9 += t8 + 1;
-         return;
-      } else {
-         t9 = t8 - t9;
-         return;
+         t9 = SRL(t9, 1); // t9 >>= 1;
+         if (v0 != 0) {
+            t9 += t8 + 1;
+         } else {
+            t9 = t8 - t9;
+         }
       }
    } else {
       v0 = t8 << 1;
-   }
-   if (v0 >= t9) {
-      v0 = t9 & 0x1;
-      t9 = SRL(t9, 1); // t9 >>= 1;
-      if (v0 != 0) {
-         t9 += t8 + 1;
-         return;
-      } else {
-         t9 = t8 - t9;
-         return;
+      if (v0 >= t9) {
+         v0 = t9 & 0x1;
+         t9 = SRL(t9, 1); // t9 >>= 1;
+         if (v0 != 0) {
+            t9 += t8 + 1;
+         } else {
+            t9 = t8 - t9;
+         }
       }
    }
-   return;
 }
 
 // TKMK00 standalone executable
