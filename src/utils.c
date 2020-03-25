@@ -1,5 +1,6 @@
 #include <dirent.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +28,13 @@ int read_s16_be(unsigned char *buf)
       ret = (int)tmp;
    }
    return ret;
+}
+
+float read_f32_be(unsigned char *buf)
+{
+   union {uint32_t i; float f;} ret;
+   ret.i = read_u32_be(buf);
+   return ret.f;
 }
 
 int is_power2(unsigned int val)
@@ -69,6 +77,20 @@ void swap_bytes(unsigned char *data, long length)
       tmp = data[i];
       data[i] = data[i+1];
       data[i+1] = tmp;
+   }
+}
+
+void reverse_endian(unsigned char *data, long length)
+{
+   long i;
+   unsigned char tmp;
+   for (i = 0; i < length; i += 4) {
+      tmp = data[i];
+      data[i] = data[i+3];
+      data[i+3] = tmp;
+      tmp = data[i+1];
+      data[i+1] = data[i+2];
+      data[i+2] = tmp;
    }
 }
 

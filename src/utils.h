@@ -5,6 +5,13 @@
 
 // defines
 
+// printing size_t varies by compiler
+#if defined(_MSC_VER) || defined(__MINGW32__)
+  #define SIZE_T_FORMAT "%Iu"
+#else
+  #define SIZE_T_FORMAT "%zu"
+#endif
+
 #define KB 1024
 #define MB (1024 * KB)
 
@@ -18,19 +25,18 @@
 #define ALIGN(VAL_, ALIGNMENT_) (((VAL_) + ((ALIGNMENT_) - 1)) & ~((ALIGNMENT_) - 1))
 
 // read/write u32/16 big/little endian
-#define BUF(buf) ((u8*)(buf))
-#define read_u32_be(buf) (unsigned int)((BUF(buf)[0] << 24) + (BUF(buf)[1] << 16) + (BUF(buf)[2] << 8) + (BUF(buf)[3]))
-#define read_u32_le(buf) (unsigned int)((BUF(buf)[1] << 24) + (BUF(buf)[0] << 16) + (BUF(buf)[3] << 8) + (BUF(buf)[2]))
+#define read_u32_be(buf) (unsigned int)(((buf)[0] << 24) + ((buf)[1] << 16) + ((buf)[2] << 8) + ((buf)[3]))
+#define read_u32_le(buf) (unsigned int)(((buf)[1] << 24) + ((buf)[0] << 16) + ((buf)[3] << 8) + ((buf)[2]))
 #define write_u32_be(buf, val) do { \
-   BUF(buf)[0] = ((val) >> 24) & 0xFF; \
-   BUF(buf)[1] = ((val) >> 16) & 0xFF; \
-   BUF(buf)[2] = ((val) >> 8) & 0xFF; \
-   BUF(buf)[3] = (val) & 0xFF; \
+   (buf)[0] = ((val) >> 24) & 0xFF; \
+   (buf)[1] = ((val) >> 16) & 0xFF; \
+   (buf)[2] = ((val) >> 8) & 0xFF; \
+   (buf)[3] = (val) & 0xFF; \
 } while(0)
-#define read_u16_be(buf) ((BUF(buf)[0] << 8) + (BUF(buf)[1]))
+#define read_u16_be(buf) (((buf)[0] << 8) + ((buf)[1]))
 #define write_u16_be(buf, val) do { \
-   BUF(buf)[0] = ((val) >> 8) & 0xFF; \
-   BUF(buf)[1] = ((val)) & 0xFF; \
+   (buf)[0] = ((val) >> 8) & 0xFF; \
+   (buf)[1] = ((val)) & 0xFF; \
 } while(0)
 
 // print nibbles and bytes
@@ -46,15 +52,12 @@
 #if defined(_MSC_VER) || defined(__MINGW32__)
   #include <direct.h>
   #define mkdir(DIR_, PERM_) _mkdir(DIR_)
+  #ifndef strcasecmp
+    #define strcasecmp(A, B) stricmp(A, B)
+  #endif
 #endif
 
 // typedefs
-typedef unsigned int u32;
-typedef signed int i32;
-typedef unsigned short u16;
-typedef signed short i16;
-typedef unsigned char u8;
-typedef signed char i8;
 
 #define MAX_DIR_FILES 128
 typedef struct
@@ -75,6 +78,9 @@ extern int g_verbosity;
 // convert two bytes in big-endian to signed int
 int read_s16_be(unsigned char *buf);
 
+// convert four bytes in big-endian to float
+float read_f32_be(unsigned char *buf);
+
 // determine if value is power of 2
 // returns 1 if val is power of 2, 0 otherwise
 int is_power2(unsigned int val);
@@ -89,6 +95,9 @@ void print_hex(const unsigned char *buf, int length);
 
 // perform byteswapping to convert from v64 to z64 ordering
 void swap_bytes(unsigned char *data, long length);
+
+// reverse endian to convert from n64 to z64 ordering
+void reverse_endian(unsigned char *data, long length);
 
 // get size of file without opening it;
 // returns file size or negative on error
