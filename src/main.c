@@ -12,9 +12,11 @@ typedef struct
 {
    char *in_filename;
    char *out_dir;
-   unsigned int a3;
-   unsigned int offset;
+   uint32_t alpha_color;
+   uint32_t offset;
 } tkmk00_config_t;
+
+static const uint32_t OFFSET_ALL = 0xFFFFFFFF;
 
 // default configuration
 static const tkmk00_config_t default_config = 
@@ -22,7 +24,7 @@ static const tkmk00_config_t default_config =
    NULL, // input filename
    NULL, // output directory
    0x01, // color to clear alpha
-   0xFFFFFFFF, // offset
+   OFFSET_ALL, // offset
 };
 
 static void print_usage(void)
@@ -33,13 +35,13 @@ static void print_usage(void)
          "\n"
          "Optional arguments:\n"
          " -a ALPHA     RGBA color to clear alpha bit [usually 0x01 or 0xBE] (default: 0x%02X)\n"
-         " -d DIR       output directory (default: FILE.tkmk00)\n"
+         " -d DIR       output directory (default: pwd)\n"
          " -o OFFSET    offset of TKMK00 data in FILE (default: all)\n"
          " -v           verbose progress output\n"
          "\n"
          "File arguments:\n"
          " FILE        input ROM file\n",
-         default_config.a3);
+         default_config.alpha_color);
    exit(EXIT_FAILURE);
 }
 
@@ -58,7 +60,7 @@ static void parse_arguments(int argc, char *argv[], tkmk00_config_t *config)
                if (++i >= argc) {
                   print_usage();
                }
-               config->a3 = strtoul(argv[i], NULL, 0);
+               config->alpha_color = strtoul(argv[i], NULL, 0);
                break;
             case 'd':
                if (++i >= argc) {
@@ -109,11 +111,11 @@ static int find_tkmk00(unsigned char *buf, unsigned int buf_len, unsigned int *o
    return count;
 }
 
-static void extract_tkmk00(unsigned char *buf, char *out_dir, unsigned int offset, unsigned int a3)
+static void extract_tkmk00(uint8_t *buf, char *out_dir, uint32_t offset, uint32_t alpha_color)
 {
    char out_filename[FILENAME_MAX];
-   unsigned char *a1_buf = NULL;
-   unsigned char *a2_buf = NULL;
+   uint8_t *a1_buf = NULL;
+   uint8_t *a2_buf = NULL;
    long bytes_written;
    int w, h;
    int a1_size, a2_size;
@@ -134,7 +136,7 @@ static void extract_tkmk00(unsigned char *buf, char *out_dir, unsigned int offse
    h = read_u16_be(&buf[offset + 0xA]);
    
    // run decoder
-   tkmk00decode(&buf[offset], a1_buf, a2_buf, a3);
+   tkmk00_decode(&buf[offset], a1_buf, a2_buf, alpha_color);
 
    make_dir(out_dir);
 
@@ -168,7 +170,7 @@ int main(int argc, char *argv[])
    char out_dir_gen[FILENAME_MAX];
    unsigned int offsets[128];
    tkmk00_config_t config;
-   unsigned char *in_buf = NULL;
+   uint8_t *in_buf = NULL;
    long in_size;
    unsigned int offset_count;
    unsigned int i;
@@ -188,7 +190,7 @@ int main(int argc, char *argv[])
       exit(EXIT_FAILURE);
    }
 
-   if (config.offset == 0xFFFFFFFF) {
+   if (config.offset == OFFSET_ALL) {
       offset_count = find_tkmk00(in_buf, (unsigned int)in_size, offsets);
    } else {
       offsets[0] = config.offset;
@@ -196,7 +198,7 @@ int main(int argc, char *argv[])
    }
 
    for (i = 0; i < offset_count; i++) {
-      extract_tkmk00(in_buf, config.out_dir, offsets[i], config.a3);
+      extract_tkmk00(in_buf, config.out_dir, offsets[i], config.alpha_color);
    }
 
    return EXIT_SUCCESS;

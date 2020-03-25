@@ -1,11 +1,14 @@
 ################ Target Executable and Sources ###############
 
-TARGET := tkmk00test
+TARGET := tkmk00
 
-SRC_FILES  := main.c   \
-              n64graphics.c \
-              tkmk00.c \
-              utils.c
+SRC_FILES := tkmk00.c \
+             utils.c
+
+TEST_SRC_FILES := main.c   \
+                  n64graphics.c \
+                  tkmk00.c \
+                  utils.c
 
 OBJ_DIR     = ./obj
 
@@ -19,14 +22,14 @@ LD        = $(CC)
 AR        = $(CROSS)ar
 
 INCLUDES  = 
-DEFS      = 
+DEFS      = -DTKMK00_STANDALONE
 # Release flags
-# CFLAGS    = -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections $(INCLUDES) $(DEFS) -MMD
-# LDFLAGS   = -s -Wl,--gc-sections
+CFLAGS    = -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections $(INCLUDES) $(DEFS) -MMD
+LDFLAGS   = -s -Wl,--gc-sections
 # Debug flags
-CFLAGS    = -Wall -Wextra -O0 -g $(INCLUDES) $(DEFS) -MMD
-LDFLAGS   = 
-LIBS      = -lpng
+#CFLAGS    = -Wall -Wextra -O0 -g $(INCLUDES) $(DEFS) -MMD
+#LDFLAGS   = 
+LIBS      = 
 
 OBJ_FILES = $(addprefix $(OBJ_DIR)/,$(SRC_FILES:.c=.o))
 DEP_FILES = $(OBJ_FILES:.o=.d)
